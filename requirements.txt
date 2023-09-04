@@ -1,0 +1,6 @@
+# Lists required Python pip dependencies.
+# To install them, run: pip install -r requirements.txt
+praw >= 7.7.1
+tweepy >= 4.14.0
+discord.py >= 2.3.2
+requests >= 2.31.0
