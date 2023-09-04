@@ -137,7 +137,7 @@ def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[Me
     # Creating an embed for the discord message
     embed = discord.Embed(
         colour = discord.Colour.from_str(CONFIG["discord"]["embed_color"]),
-        title = trim_to_limit(submission.title),
+        title = trim_to_limit( discord.utils.escape_markdown(submission.title) ),
         url = f"https://redd.it/{submission.id}",
         timestamp = datetime.fromtimestamp(submission.created_utc, timezone.utc)
     )
