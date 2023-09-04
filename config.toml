@@ -1,0 +1,59 @@
+# Config file for 2ootbot.
+
+[behavior]
+# Controls whether the program only runs once when executed, or operates in an infinite loop with a delay in between each run.
+# If loop=true, the program will operate in an infinite loop, but will "sleep" for the specified amount of time before starting the next loop. It will not terminate on its own.
+# If loop=false, the program will terminate after running, and will not run again on its own. A cron job can be used to run the program at regular intervals.
+loop = false
+time_between_posts = 30  # The number of minutes the program should pause for after each loop. Beware of rate limits; e.g. Twitter may rate limit you if it is any more frequent than 30 minutes. Has no effect if loop=false.
+
+
+[logging]
+# The bot will record logs so that you can understand what it's doing and be made aware on any errors that may arise.
+# The log level controls how severe an event should be for it to be logged. It can be set to an integer between 1 and 5, with 1 meaning do as much logging as possible and 5 meaning only log critical errors.
+# Setting the log level will still allow events more severe than that level to be logged, but not less. For example, log_level=3 will mean that messages of severity 3-5 will be logged.
+# log_level = 1 : DEBUG : Detailed output of normal operations, typically only used when debugging
+# log_level = 2 : INFO : Logs normal operations; communicates what the bot is doing
+# log_level = 3 : WARNING : Logs when something unexpected happens and the bot has to change course; for example, it finds a Reddit post that is not allowed by this config file.
+# log_level = 4 : ERROR : Logs when the bot is unable to do something that it's supposed to
+# log_level = 5 : CRITICAL : Logs errors that require the bot to stop completely
+log_level = 2
+logfile = "./2ootbot.log"  # The location of the file that log messages will be sent to. If set to false or an empty string "", messages will instead be printed to the screen/standard output.
+
+
+[media]
+cache_file = "./cache.csv"  # The filepath of where the csv cache file should be. The bot will use this file to store post IDs to make sure it's not repeating itself.
+media_folder = "./media"  # The filepath of the folder where downloaded media will be stored. Files in this folder will be automatically deleted when no longer needed.
+get_media = true  # Whether to get posts that contain media (images, GIFs, videos)
+only_get_media = false  # If true, the bot will only get posts that contain media, and skip text-only posts.
+get_videos = true  # Whether to download Reddit videos. If false, posts containing a video will be skipped. If true, ffmpeg must be installed and usable from the command line.
+
+
+[reddit]
+subreddit = "okbuddyretard"  # The subreddit to get posts from. Do not include the "r/"
+sort = "hot"  # What to sort by when searching the subreddit for posts. Can be one of the following: "hot", "new", "rising", "top_all", "top_hour", "top_day", "top_week", "top_month", "top_year", "random" (note that some subreddits do not support random)
+search_limit = 10   # The number of posts to search through. The bot will stop if it searches through this many and does not find something new to post.
+skip_nsfw = true  # Whether to skip over posts marked as NSFW.
+skip_stickied = true  # Whether to skip over posts that are stickied (pinned).
+skip_spoilers = true  # Whether to skip over posts that are marked as a spoiler.
+skip_link_posts = false  # Whether to skip over posts that are links to an external site. Note that if the link is to an image file, it will be treated as an image and this setting will not apply.
+
+
+[twitter]
+# Posting to Twitter (or X, sorry Elon) requires a Twitter developer account. API keys should be placed in the secrets.toml file.
+post_to_twitter = false
+post_nsfw = true  # Whether to post submissions marked as NSFW. Has no effect if [reddit]skip_nsfw=true
+post_spoilers = true  # Whether to post submissions marked as a spoiler. Has no effect if [reddit]skip_spoilers=true
+
+
+[discord]
+# Posting to Discord. Requires a Webhook in each channel you want to post to.
+post_to_discord = false
+webhooks = [
+    "https://discord.com/api/webhooks/xxxx/xxxxxxxx",
+]  # A list of the URLs of each webhook
+post_nsfw = true  # Whether to post submissions marked as NSFW to NSFW channels. **If a channel is not marked as NSFW, no NSFW submissions will be posted to it regardless of this setting. Has no effect if [reddit]skip_nsfw=true
+    spoiler_nsfw = true  # Whether to mark NSFW media as a spoiler in Discord.
+post_spoilers = true  # Whether to post submissions marked as a spoiler. Has no effect if [reddit]skip_spoilers=true
+    spoiler_spoilers = true  # Whether to mark spoiler media as a spoiler in Discord. 
+embed_color = "#ff4500" # Color to use in the Discord embed. Can either be in the hex format "#ff4500" or "rgb(255, 69, 0)".
