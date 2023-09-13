@@ -379,7 +379,7 @@ class ThreadTweet:
         if thread_size <= 1:
             self.text = get_tweet_text(submission)
         else:
-            self.text = trim_to_limit( f"({self.index + 1}/{thread_size}) {submission.title}" ) + f"https://redd.it/{submission.id}"
+            self.text = trim_to_limit( f"({self.index + 1}/{thread_size}) {submission.title}" ) + f" https://redd.it/{submission.id}"
     
     def __len__(self):
         return len(self.media)
@@ -397,14 +397,14 @@ def split_tweet(submission: praw.reddit.Submission, media: list[MediaFile]):
         if isinstance(file, VideoFile) or file.type == "image/gif":
             if len(tweets[i]) >= 1:
                 i += 1
-                tweets[i] = ThreadTweet(i)
+                tweets.append(ThreadTweet(i))
             else:
                 tweets[i].add_media(file)
             i += 1
-            tweets[i] = ThreadTweet(i)
+            tweets.append(ThreadTweet(i))
         elif len(tweets[i]) >= 4:
             i += 1
-            tweets[i] = ThreadTweet(i, file)
+            tweets.append(ThreadTweet(i, file))
         else:
             tweets[i].add_media(file)
 

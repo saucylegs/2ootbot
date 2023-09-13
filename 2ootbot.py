@@ -226,7 +226,7 @@ if CONFIG["behavior"]["loop"]:
         try:
             main()
         except BaseException as e:
-            logging.critical(e) # Critical error; ensuring that it gets put into the log file
+            logging.critical(e, stack_info=True) # Critical error; ensuring that it gets put into the log file
             raise e
         logging.info(f"Run complete. Sleeping for {CONFIG['behavior']['time_between_posts']} minutes...")
         sleep(CONFIG["behavior"]["time_between_posts"] * 60)
@@ -236,6 +236,6 @@ else:
     try:
         main()
     except BaseException as e:
-        logging.critical(e) # Critical error; ensuring that it gets put into the log file
+        logging.critical(e, stack_info=True) # Critical error; ensuring that it gets put into the log file
         raise e
     logging.info("Run complete.")
