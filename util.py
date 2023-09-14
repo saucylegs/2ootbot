@@ -279,7 +279,7 @@ def get_media(submission: praw.reddit.Submission) -> (MediaFile | list[MediaFile
                 else:
                     raise InvalidSubmissionError(f"No image was found at unknown URL {submission.url}. External link posts are disabled in the config. Skipping")
             except BaseException as e:
-                raise ExtractionError(f"Failed to query the unknown URL {submission.url}.", original_error=e)
+                raise ExtractionError(f"Failed to query the unknown URL {submission.url}.", {"Requests object": vars(req)}, original_error=e)
 
 
 # Returns just the name of the file when given a URL to a file.
