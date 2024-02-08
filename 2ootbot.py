@@ -52,14 +52,14 @@ def main():
                 try:
                     post_to_twitter(submission, media)
                     successful_posts += 1
-                except tweepy.TweepyException as e:
+                except BaseException as e:
                     RepostError("Error when posting to Twitter.", original_error=e).log()
 
             try:
                 if CONFIG["discord"]["post_to_discord"] == True and len(CONFIG["discord"]["webhooks"]) > 0:
                     successful_posts += post_to_discord(submission, media)
             except BaseException as e:
-                raise TootbotError("Critical error when trying to post to Discord.", original_error=e)
+                TootbotError("Critical error when trying to post to Discord.", original_error=e).log()
             
             finally:
                 add_to_cache(submission.id, successful_posts)
