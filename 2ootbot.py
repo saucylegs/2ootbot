@@ -81,7 +81,7 @@ def post_to_twitter(submission: praw.reddit.Submission, media: MediaFile|list[Me
         access_token_secret=SECRETS["twitter"]["access_token_secret"]
     )
 
-    logging.info("Logged into Twitter/X.") # I would display the bot's username here, but there's a 25 requests/day rate limit on looking yourself up. I learned this the hard way. Thanks Elon
+    logging.info("Logged into X.") # I would display the bot's username here, but there's a 25 requests/day rate limit on looking yourself up. I learned this the hard way. Thanks Elon
 
     if media == None:
         # The simplest one: if there is no media, post a text-only tweet
@@ -107,16 +107,19 @@ def post_to_twitter(submission: praw.reddit.Submission, media: MediaFile|list[Me
 
         if isinstance(media, list):
             # Multiple media files; may need to tweet multiple times in a thread
-            for file in media:
-                file.upload_to_twitter(v1)
-
             tweets = split_tweet(submission, media)
 
-            latest_tweet_id = None # The ID of the latest tweet so that we can reply to it
-            for tweet in tweets:
-                created = twitter.create_tweet(text=tweet.text, media_ids=tweet.media_ids, in_reply_to_tweet_id=latest_tweet_id)
-                latest_tweet_id = created.data["id"]
-                logging.info(f"Succesfully made tweet number {tweet.index} in thread. Tweet ID: {created.data['id']}")
+            if len(tweets) > CONFIG["twitter"]["tweet_limit"]:
+                logging.warning(f"Submission {submission.id} would require {len(tweets)} tweets, which is greater than the set limit of {CONFIG['twitter']['tweet_limit']}. Skipping X.")
+            else:
+                for file in media:
+                    file.upload_to_twitter(v1)
+
+                latest_tweet_id = None # The ID of the latest tweet so that we can reply to it
+                for tweet in tweets:
+                    created = twitter.create_tweet(text=tweet.text, media_ids=tweet.media_ids, in_reply_to_tweet_id=latest_tweet_id)
+                    latest_tweet_id = created.data["id"]
+                    logging.info(f"Succesfully made tweet number {tweet.index} in thread. Tweet ID: {created.data['id']}")
 
         else:
             # Single media file
@@ -129,6 +132,12 @@ def post_to_twitter(submission: praw.reddit.Submission, media: MediaFile|list[Me
             )
 
             logging.info(f"Successfully tweeted submission {submission.id}. Tweet ID: {created.data['id']}")
+        
+    # Send the reddit URL in a reply if configured to do so
+    if CONFIG["twitter"]["reply_with_link"] and not isinstance(media, ExternalLink):
+        context_reply = twitter.create_tweet(text=f"From https://redd.it/{submission.id}", in_reply_to_tweet_id=created.data["id"])
+        logging.info(f"Successfully tweeted reply containing the URL to submission {submission.id}. Tweet ID: {context_reply.data['id']}")
+
 
 
 def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[MediaFile]|ExternalLink|None):
@@ -172,7 +181,7 @@ def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[Me
                 logging.warning(f"Discord webhook {webhook_url} is invalid. Skipping")
                 continue
             
-            if submission.over_18 and not webhook.channel.nsfw:
+            if submission.over_18 and CONFIG["discord"]["only_in_nsfw_channels"] and not webhook.channel.nsfw:
                 logging.info(f"Reddit submission is NSFW, but Discord channel {webhook.channel_id} is not marked as NSFW. Skipping this channel")
                 continue
 

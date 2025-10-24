@@ -2,7 +2,7 @@ import os
 import logging
 import praw
 import tweepy
-import tomllib # REQUIRES PYTHON 3.11 OR NEWER
+import tomllib # Requires Python 3.11 or newer
 import re
 import requests
 import xml.dom.minidom as xmldom
@@ -60,15 +60,16 @@ class TootbotError(Exception):
         logging.log(self.severity * 10, self.message)
 
 class ExtractionError(TootbotError):
-    pass
+    """Indicates that an error occured that prevented the media file from being downloaded."""
 
 class UploadError(TootbotError):
-    pass
+    """Indicates that an error occured that prevented the media file from being uploaded to Twitter."""
 
 class RepostError(TootbotError):
-    pass
+    """Indicates that the bot failed to post to a certain location."""
 
 class InvalidSubmissionError(TootbotError):
+    """Indicates that a Reddit post does not satisfy the parameters specified in the config file. The bot should thus move on to the next post."""
     def __init__(self, message: str, relevant_objects:(dict[str, ]|None)=None, original_error:(BaseException|None)=None):
         super().__init__(message, relevant_objects=relevant_objects, original_error=original_error, severity=3)
 
@@ -76,21 +77,34 @@ class InvalidSubmissionError(TootbotError):
 # === Media classes ===
 
 class MediaFile:
-    def __init__(self, submission:(praw.reddit.Submission|None)=None, url=None, name=None, filepath=None):
+    """A media file (image or video) attached to a Reddit submission.
+    Has various methods for downloading and uploading the file."""
+
+    def __init__(self, submission:(praw.reddit.Submission|None)=None, url:str=None, name:str=None, filepath:str=None, type=""):
+        """
+        Parameters:
+            submission: The Reddit submission that this media file was originally attached to.
+            url: A URL from which the file can be downloaded. Inferred from submission if not provided.
+            name: The filename. Automatically inferred if not provided.
+            filepath: The filepath of the local copy of the file. Should only be provided if it has been downloaded already.
+            type: The content-type header (MIME type) of the file. Should be given for files that are not hosted by Reddit.
+        """
+        self.filepath = filepath
+        self.type = type
+        self.in_iteration = False
         if submission:
             self.submission = submission
             self.url = url if url else submission.url
-            self.name = name if name else get_media_file_name(self.url)
         elif url:
             self.url = url
-            self.name = name if name else get_media_file_name(url)
-        self.filepath = filepath
-        self.in_iteration = False
+        self.name = name if name else self.generate_name(name)
 
     def is_downloaded(self) -> bool:
+        """Returns whether this media file has been downloaded locally."""
         return self.filepath != None
 
     def delete(self):
+        """Deletes the local copy of the file."""
         if self.filepath:
             try:
                 os.remove(self.filepath)
@@ -118,6 +132,19 @@ class MediaFile:
         logging.info(f"Uploaded media file {self.name} to Twitter. Twitter Media ID: {self.twitter_id}")
         logging.debug(f"Uploaded file object attributes: {vars(self.twitter_upload_info)}")
         return self.twitter_id
+    
+    def generate_name(self) -> str:
+        """Generates a name for the file based on its URL and possibly its MIME type."""
+        urlmatch = re.search(r"\/(\w+)(\.[A-Za-z0-9.]+)?\/?$", self.url)
+        if urlmatch:
+            self.name = urlmatch.group(1)
+            if urlmatch.group(2): # File extension extracted from URL
+                self.name += urlmatch.group(2).lower()
+            else: # Try to guess file extension based on MIME type, if available
+                self.name += get_file_ext(self.type)
+        else:
+            self.name = "unnamed_media" + get_file_ext(self.type)
+        return self.name
 
     def __str__(self):
         terms = [f"MediaFile {self.name}", f"from url {self.url}"]
@@ -139,11 +166,16 @@ class MediaFile:
             return self
 
 class VideoFile(MediaFile):
+    def __init__(self, submission:(praw.reddit.Submission|None)=None, url=None, name=None, filepath=None, type="video/mp4"):
+        super().__init__(submission, url, name, filepath, type)
+
     def download(self):
+        """Downloads a local copy of the video. The local file can be referred to by this object's filepath attribute.
+        Because Reddit separates the video and audio tracks, ffmpeg needs to be installed and usable from the command line so they can be recombined."""
         try:
             dash_url = self.submission.media["reddit_video"]["dash_url"]
         except (KeyError, TypeError) as e:
-            raise ExtractionError("Tried to download a video, but not video data was found.", {"Reddit submission object": vars(self.submission)}, e)
+            raise ExtractionError("Tried to download a video, but no video data was found.", {"Reddit submission object": vars(self.submission)}, e)
         
         logging.info(f"Downloading the video {self.url}")
         # Reddit keeps their video and audio tracks separate and lists them in a .mpd (XML) file.
@@ -163,8 +195,6 @@ class VideoFile(MediaFile):
         logging.info(f"Downloaded video playlist to {mpd_file}")
         logging.info("Downloading the video/audio tracks and combining them with ffmpeg. This might take a while...")
         
-        self.name = get_media_file_name(self.url, default_extension=".mp4")
-        self.type = "video/mp4"
         video_file = os.path.join(MEDIA_FOLDER, self.name)
         try:
             # Using ffmpeg to download the video and audio tracks and merge them into one mp4 file
@@ -189,8 +219,8 @@ class VideoFile(MediaFile):
 
 class ImageFile(MediaFile):
     def download(self):
+        """Downloads a local copy of the image. The local file can be referred to by this object's filepath attribute."""
         logging.info(f"Downloading the image {self.url}")
-        self.name = get_media_file_name(self.url)
         img_file = os.path.join(MEDIA_FOLDER, self.name)
             
         # Downloading image file
@@ -207,20 +237,14 @@ class ImageFile(MediaFile):
         self.filepath = img_file
         self.size = os.path.getsize(self.filepath)
 
-class ExternalLink:
-    def __init__(self, url: str):
-        self.url = url
-
-    def __str__(self):
-        return self.url
-    
-    def __len__(self):
-        return len(self.url)
+class ExternalLink(str):
+    """Subclass of str used for external links returned by Reddit."""
 
 
 # === Utility functions ===
 
 def get_media(submission: praw.reddit.Submission) -> (MediaFile | list[MediaFile] | ExternalLink | None):
+    """Returns the media file(s) or link attached to a Reddit post."""
     try:
         if submission.is_gallery:
             # Submission is a gallery (contains multiple images). Collect them all
@@ -269,8 +293,9 @@ def get_media(submission: praw.reddit.Submission) -> (MediaFile | list[MediaFile
             logging.info(f"Media for Reddit submission {submission.id} is from a non-Reddit domain ({submission.url}). Checking it for a compatible image")
             try:
                 req = requests.get(submission.url)
-                if req.headers["content-type"] == "image/jpeg" or req.headers["content-type"] == "image/png" or req.headers["content-type"] == "image/webp" or req.headers["content-type"] == "image/gif":
-                    img = ImageFile(submission)
+                mime_type = req.headers["content-type"]
+                if mime_type.startswith("image/") and get_file_ext(mime_type):
+                    img = ImageFile(submission, type=mime_type)
                     img.download()
                     return img
                 elif CONFIG["reddit"]["skip_link_posts"] == False:
@@ -280,24 +305,28 @@ def get_media(submission: praw.reddit.Submission) -> (MediaFile | list[MediaFile
                     raise InvalidSubmissionError(f"No image was found at unknown URL {submission.url}. External link posts are disabled in the config. Skipping")
             except BaseException as e:
                 raise ExtractionError(f"Failed to query the unknown URL {submission.url}.", {"Requests object": vars(req)}, original_error=e)
+    
 
-
-# Returns just the name of the file when given a URL to a file.
-# For example, get_media_file_name("https://i.redd.it/vedspy4xum341.jpg") would return "vedspy4xum341.jpg".
-def get_media_file_name(url, omit_extension=False, default_extension="", default_name="unnamed_media_file"):
-    match = re.search(r"\/(\w+)(\.[A-Za-z0-9.]+)?\/?$", url)
-    if match:
-        if omit_extension:
-            return match.group(1)
-        elif match.group(2):
-            return match.group(1) + match.group(2).lower()
-        else:
-            return match.group(1) + default_extension
+def get_file_ext(mime_type: str) -> str:
+    """Returns a string representing the file extension (".jpg", ".mp4", etc.)
+    corresponding to the given MIME type ("image/jpeg", "video/mp4", etc.)
+    If the MIME type is unrecognized, an empty string is returned."""
+    MIME_EXTENSIONS = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+        "image/gif": ".gif",
+        "video/mp4": ".mp4"
+    }
+    if mime_type in MIME_EXTENSIONS:
+        return MIME_EXTENSIONS[mime_type]
     else:
-        return default_name + default_extension
+        return ""
     
 
 def add_to_cache(id: str, successes=0):
+    """Records the Reddit post with the given ID to the cache file so it is not posted again.
+    successes refers to the number of times the bot successfully reposted it (i.e. 1 for each Twitter account or Discord channel posted to)."""
     timestamp = time.strftime("%Y %b %d %H:%M:%S")
     with open(CACHE_FILE, "at", encoding="utf8", newline="") as file:
         file.write(f"{id},{successes},{timestamp}\n")
@@ -338,7 +367,6 @@ def validate_submission(submission: praw.reddit.Submission):
         logging.info(f"Submission {submission.id} is a spoiler, skipping...")
         return False
     logging.info(f"Proceeding with submission {submission.id}...")
-
     return True
 
 def trim_to_limit(text: str, limit=256):
@@ -356,6 +384,13 @@ def get_tweet_text(submission: praw.reddit.Submission, url:ExternalLink=None):
     if url:
         text = trim_to_limit(submission.title, 230) # URLs in Tweets are compressed down to 23 character t.co links. We need to make room for two links
         return f"{text} {url} (https://redd.it/{submission.id})"
+    
+    elif CONFIG["twitter"]["reply_with_link"]:
+        if submission.selftext:
+            return trim_to_limit(f"{submission.title}\n{submission.selftext}", 280)
+        else:
+            return trim_to_limit(submission.title, 280)
+
     elif submission.selftext:
         text = trim_to_limit(f"{submission.title}\n{submission.selftext}")
         return f"{text}\nhttps://redd.it/{submission.id}"
@@ -397,7 +432,7 @@ def split_tweet(submission: praw.reddit.Submission, media: list[MediaFile]):
         if isinstance(file, VideoFile) or file.type == "image/gif":
             if len(tweets[i]) >= 1:
                 i += 1
-                tweets.append(ThreadTweet(i))
+                tweets.append(ThreadTweet(i, file))
             else:
                 tweets[i].add_media(file)
             i += 1
