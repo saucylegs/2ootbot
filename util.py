@@ -97,7 +97,7 @@ class MediaFile:
             self.url = url if url else submission.url
         elif url:
             self.url = url
-        self.name = name if name else self.generate_name(name)
+        self.name = name if name else self.generate_name()
 
     def is_downloaded(self) -> bool:
         """Returns whether this media file has been downloaded locally."""
