@@ -5,7 +5,7 @@
 # If loop=true, the program will operate in an infinite loop, but will "sleep" for the specified amount of time before starting the next loop. It will not terminate on its own.
 # If loop=false, the program will terminate after running, and will not run again on its own. A cron job can be used to run the program at regular intervals.
 loop = false
-time_between_posts = 30  # The number of minutes the program should pause for after each loop. Beware of rate limits; e.g. Twitter may rate limit you if it is any more frequent than 170 minutes. Has no effect if loop=false.
+time_between_posts = 60  # The number of minutes the program should pause for after each loop. Beware of rate limits; e.g. Twitter may rate limit you if it is any more frequent than 85 minutes. Has no effect if loop=false.
 
 
 [logging]
@@ -44,8 +44,12 @@ skip_link_posts = false  # Whether to skip over posts that are links to an exter
 post_to_twitter = false
 post_nsfw = true  # Whether to post submissions marked as NSFW. Has no effect if [reddit]skip_nsfw=true
 post_spoilers = true  # Whether to post submissions marked as a spoiler. Has no effect if [reddit]skip_spoilers=true
-reply_with_link = true  # The X algorithm heavily punishes posts with external links. If this is set to true, the link to the Reddit post will be placed in a reply instead of in the main tweet. Does not apply to link posts.
 tweet_limit = 1  # For submissions with multiple images, the bot will skip posting it to X if more than this many tweets are required to include all the images. This number does not include the link reply. Be mindful of X's strict rate limits.
+# The next two settings pertain to linking to the original Reddit submission.
+# It is good practice to link to the original post. However, the X algorithm heavily punishes tweets that contain external links.
+# If you include the link in the main tweet, it is much less likely to be seen by others. If you include the link in a reply to the main tweet, you are much more likely to hit X's strict rate limits.
+link_in_main_tweet = false
+reply_with_link = true
 
 
 [discord]
@@ -55,7 +59,6 @@ webhooks = [
     "https://discord.com/api/webhooks/xxxx/xxxxxxxx",
 ]  # A list of the URLs of each webhook
 post_nsfw = true  # Whether to post submissions marked as NSFW. Has no effect if [reddit]skip_nsfw=true
-    only_in_nsfw_channels = true  # If true, NSFW submissions will only be posted to NSFW channels; channels that are not marked as NSFW will be skipped.
     spoiler_nsfw = true  # Whether to mark NSFW media as a spoiler in Discord.
 post_spoilers = true  # Whether to post submissions marked as a spoiler. Has no effect if [reddit]skip_spoilers=true
     spoiler_spoilers = true  # Whether to mark spoiler media as a spoiler in Discord. 

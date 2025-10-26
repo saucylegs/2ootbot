@@ -381,22 +381,25 @@ def trim_to_limit(text: str, limit=256):
 
 def get_tweet_text(submission: praw.reddit.Submission, url:ExternalLink=None):
     """Returns the text that will be used for a Tweet."""
-    if url:
-        text = trim_to_limit(submission.title, 230) # URLs in Tweets are compressed down to 23 character t.co links. We need to make room for two links
-        return f"{text} {url} (https://redd.it/{submission.id})"
-    
-    elif CONFIG["twitter"]["reply_with_link"]:
-        if submission.selftext:
+
+    if CONFIG["twitter"]["link_in_main_tweet"]:
+        if url:
+            text = trim_to_limit(submission.title, 230) # URLs in Tweets are compressed down to 23 character t.co links. We need to make room for two links
+            return f"{text} {url} (https://redd.it/{submission.id})"
+        elif submission.selftext:
+            text = trim_to_limit(f"{submission.title}\n{submission.selftext}")
+            return f"{text}\nhttps://redd.it/{submission.id}"
+        else:
+            text = trim_to_limit(submission.title)
+            return f"{text} https://redd.it/{submission.id}"  
+    else:
+        if url:
+            text = trim_to_limit(submission.title)
+            return f"{text} {url}"
+        elif submission.selftext:
             return trim_to_limit(f"{submission.title}\n{submission.selftext}", 280)
         else:
-            return trim_to_limit(submission.title, 280)
-
-    elif submission.selftext:
-        text = trim_to_limit(f"{submission.title}\n{submission.selftext}")
-        return f"{text}\nhttps://redd.it/{submission.id}"
-    else:
-        text = trim_to_limit(submission.title)
-        return f"{text} https://redd.it/{submission.id}"
+            return trim_to_limit(text, 280)
     
 
 class ThreadTweet:

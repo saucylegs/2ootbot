@@ -1,5 +1,3 @@
-#!/usr/bin/env python3.11
-
 import praw
 import tweepy
 import discord
@@ -43,7 +41,6 @@ def main():
             try:
                 media = get_media(submission)
             except TootbotError as e:
-                e.log()
                 continue
             # Valid submission, post it
             successful_posts = 0
@@ -53,13 +50,13 @@ def main():
                     post_to_twitter(submission, media)
                     successful_posts += 1
                 except BaseException as e:
-                    RepostError("Error when posting to Twitter.", original_error=e).log()
+                    RepostError("Error when posting to Twitter.", original_error=e)
 
             try:
                 if CONFIG["discord"]["post_to_discord"] == True and len(CONFIG["discord"]["webhooks"]) > 0:
                     successful_posts += post_to_discord(submission, media)
             except BaseException as e:
-                TootbotError("Critical error when trying to post to Discord.", original_error=e).log()
+                TootbotError("Critical error when trying to post to Discord.", original_error=e)
             
             finally:
                 add_to_cache(submission.id, successful_posts)
@@ -134,7 +131,7 @@ def post_to_twitter(submission: praw.reddit.Submission, media: MediaFile|list[Me
             logging.info(f"Successfully tweeted submission {submission.id}. Tweet ID: {created.data['id']}")
         
     # Send the reddit URL in a reply if configured to do so
-    if CONFIG["twitter"]["reply_with_link"] and not isinstance(media, ExternalLink):
+    if CONFIG["twitter"]["reply_with_link"]:
         context_reply = twitter.create_tweet(text=f"From https://redd.it/{submission.id}", in_reply_to_tweet_id=created.data["id"])
         logging.info(f"Successfully tweeted reply containing the URL to submission {submission.id}. Tweet ID: {context_reply.data['id']}")
 
@@ -180,17 +177,13 @@ def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[Me
             except ValueError | discord.NotFound:
                 logging.warning(f"Discord webhook {webhook_url} is invalid. Skipping")
                 continue
-            
-            if submission.over_18 and CONFIG["discord"]["only_in_nsfw_channels"] and not webhook.channel.nsfw:
-                logging.info(f"Reddit submission is NSFW, but Discord channel {webhook.channel_id} is not marked as NSFW. Skipping this channel")
-                continue
 
             if not media:
                 # No media files
                 try:
                     webhook.send(embed=embed, wait=True)
                 except discord.HTTPException as e:
-                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3).log()
+                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3)
                     continue
 
             elif isinstance(media, ExternalLink):
@@ -198,7 +191,7 @@ def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[Me
                 try:
                     webhook.send(content=media.url, embed=embed, wait=True)
                 except discord.HTTPException as e:
-                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3).log()
+                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3)
                     continue
             
             elif isinstance(media, ImageFile):
@@ -208,7 +201,7 @@ def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[Me
                 try:
                     webhook.send(embed=embed, file=file, wait=True)
                 except discord.HTTPException as e:
-                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3).log()
+                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3)
                     continue
 
             else:
@@ -219,7 +212,7 @@ def post_to_discord(submission: praw.reddit.Submission, media: MediaFile|list[Me
                 try:
                     webhook.send(embed=embed, files=files, wait=True)
                 except discord.HTTPException as e:
-                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3).log()
+                    RepostError(f"There was an error when uploading to the Discord webhook {webhook_url}.", original_error=e, severity=3)
                     continue
             
             logging.info(f"Successfully posted to Discord channel {webhook.channel_id} via webhook {webhook_url}.")
