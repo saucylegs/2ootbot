@@ -399,7 +399,7 @@ def get_tweet_text(submission: praw.reddit.Submission, url:ExternalLink=None):
         elif submission.selftext:
             return trim_to_limit(f"{submission.title}\n{submission.selftext}", 280)
         else:
-            return trim_to_limit(text, 280)
+            return trim_to_limit(submission.title, 280)
     
 
 class ThreadTweet:
