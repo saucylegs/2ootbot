@@ -111,7 +111,7 @@ def post_to_twitter(submission: praw.reddit.Submission, media: MediaFile|list[Me
             else:
                 latest_tweet_id = None # The ID of the latest tweet so that we can reply to it
                 for tweet in tweets:
-                    created = twitter.create_tweet(text=tweet.text, media_ids=tweet.upload_media(), in_reply_to_tweet_id=latest_tweet_id)
+                    created = twitter.create_tweet(text=tweet.text, media_ids=tweet.upload_media(v1), in_reply_to_tweet_id=latest_tweet_id)
                     latest_tweet_id = created.data["id"]
                     logging.info(f"Succesfully made tweet number {tweet.index} in thread. Tweet ID: {created.data['id']}")
 
