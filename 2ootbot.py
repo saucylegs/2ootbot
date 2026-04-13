@@ -109,12 +109,9 @@ def post_to_twitter(submission: praw.reddit.Submission, media: MediaFile|list[Me
             if len(tweets) > CONFIG["twitter"]["tweet_limit"]:
                 logging.warning(f"Submission {submission.id} would require {len(tweets)} tweets, which is greater than the set limit of {CONFIG['twitter']['tweet_limit']}. Skipping X.")
             else:
-                for file in media:
-                    file.upload_to_twitter(v1)
-
                 latest_tweet_id = None # The ID of the latest tweet so that we can reply to it
                 for tweet in tweets:
-                    created = twitter.create_tweet(text=tweet.text, media_ids=tweet.media_ids, in_reply_to_tweet_id=latest_tweet_id)
+                    created = twitter.create_tweet(text=tweet.text, media_ids=tweet.upload_media(), in_reply_to_tweet_id=latest_tweet_id)
                     latest_tweet_id = created.data["id"]
                     logging.info(f"Succesfully made tweet number {tweet.index} in thread. Tweet ID: {created.data['id']}")
 

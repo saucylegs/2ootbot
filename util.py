@@ -407,11 +407,17 @@ class ThreadTweet:
     def __init__(self, index: int, first_file:MediaFile=None):
         self.index = index
         self.media = [first_file] if first_file else []
-        self.media_ids = [first_file.twitter_id] if first_file else []
 
     def add_media(self, file: MediaFile):
         self.media.append(file)
-        self.media_ids.append(file.twitter_id)
+    
+    def upload_media(self) -> list[int|str]:
+        """Uploads every media file in the thread to Twitter.
+        Returns a list of each file's Twitter media ID, in the same order as the media field."""
+        media_ids = []
+        for file in self.media:
+            media_ids.append(file.upload_to_twitter())
+        return media_ids
 
     def generate_text(self, submission: praw.reddit.Submission, thread_size: int):
         if thread_size <= 1:
