@@ -198,7 +198,7 @@ class VideoFile(MediaFile):
         video_file = os.path.join(MEDIA_FOLDER, self.name)
         try:
             # Using ffmpeg to download the video and audio tracks and merge them into one mp4 file
-            subprocess.run(["ffmpeg", "-i", mpd_file, video_file], capture_output=True, check=True)
+            subprocess.run(["ffmpeg", "-protocol_whitelist", "file,http,https,tcp,tls", "-i", mpd_file, video_file], capture_output=True, check=True)
         except subprocess.CalledProcessError as e:
             with open(mpd_file) as file:
                 mpd_file_content = file.read()
@@ -327,8 +327,7 @@ def get_file_ext(mime_type: str) -> str:
 def add_to_cache(id: str, successes=0):
     """Records the Reddit post with the given ID to the cache file so it is not posted again.
     successes refers to the number of times the bot successfully reposted it (i.e. 1 for each Twitter account or Discord channel posted to)."""
-    now = time.localtime()
-    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ" if now.tm_gmtoff == 0 else "%Y-%m-%dT%H:%M:%S%z", now)
+    timestamp = time.strftime("%Y %b %d %H:%M:%S")
     with open(CACHE_FILE, "at", encoding="utf8", newline="") as file:
         file.write(f"{id},{successes},{timestamp}\n")
 
