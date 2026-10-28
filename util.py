@@ -327,7 +327,8 @@ def get_file_ext(mime_type: str) -> str:
 def add_to_cache(id: str, successes=0):
     """Records the Reddit post with the given ID to the cache file so it is not posted again.
     successes refers to the number of times the bot successfully reposted it (i.e. 1 for each Twitter account or Discord channel posted to)."""
-    timestamp = time.strftime("%Y %b %d %H:%M:%S")
+    now = time.localtime()
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ" if now.tm_gmtoff == 0 else "%Y-%m-%dT%H:%M:%S%z", now)
     with open(CACHE_FILE, "at", encoding="utf8", newline="") as file:
         file.write(f"{id},{successes},{timestamp}\n")
 
